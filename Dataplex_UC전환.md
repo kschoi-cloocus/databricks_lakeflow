@@ -106,8 +106,11 @@ ALTER  SCHEMA  health.silver SET TAGS ('zone'='curated');
 | Entry Group | Catalog · Schema | |
 | Entry Type | 자산 유형(table/view/volume/model) | 네이티브 |
 | Entry 설명(description) | `COMMENT ON TABLE/COLUMN` | |
-| Entry 커스텀 속성 | `TBLPROPERTIES` | |
+| Entry 커스텀 속성(비즈니스 메타) | **Tags** (기본) | 거버넌스 메타는 태그로 (조회·정책·검색) |
+| Entry 복합/중첩 속성 | `TBLPROPERTIES` JSON (폴백) | 태그로 안 풀리는 구조만 |
 | Entry 목록 조회 | `system.information_schema.tables/columns` | |
+
+> ℹ️ `delta.*` 등 **플랫폼/엔진 설정(TBLPROPERTIES)** 은 Dataplex에 없던 개념 → **거버넌스 이관 대상 아님**. 데이터 이관 트랙에서 Databricks 베스트프랙티스로 **신규 설정**한다.
 
 ```sql
 -- 설명(카드의 내용)
