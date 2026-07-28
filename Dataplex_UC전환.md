@@ -317,5 +317,6 @@ def migrate(entry, uc):                    # entry(Dataplex) → uc(예: health.
 ---
 
 ### 부록. 관련 문서
+- **확장(전환을 넘어)**: `Dataplex_UC확장.md` — UC 기반 ABAC·모니터링·페더레이션·공유·AI 거버넌스
 - 데이터 파이프라인 이관 프로토타입 보고서 (`데이터파이프라인_이관_프로토타입_보고서.md`) — SDP expectations·태그·격리 실증
 - 구글시트 `컨설팅_…` — 3안 비교표 / 이관난이도 / 프로토타입_결과
