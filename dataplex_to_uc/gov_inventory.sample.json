@@ -1,0 +1,102 @@
+{
+  "metadata": {
+    "patients": {
+      "description": "환자 마스터 (민감정보 포함)",
+      "labels": {
+        "pii": "true",
+        "data_domain": "health",
+        "layer": "bronze"
+      },
+      "columns": {
+        "patient_id": "환자 식별자 (PHI)",
+        "name": "환자 이름 (PHI)",
+        "birth_year": "출생연도",
+        "region": "거주 지역"
+      }
+    },
+    "vitals": {
+      "description": "활력징후 측정 원천",
+      "labels": {
+        "pii": "true",
+        "data_domain": "health",
+        "layer": "bronze"
+      },
+      "columns": {
+        "patient_id": "환자 식별자 (PHI)",
+        "measured_at": "측정 시각",
+        "heart_rate": "심박수 (bpm)",
+        "systolic": "수축기 혈압",
+        "diastolic": "이완기 혈압"
+      }
+    },
+    "vitals_daily": {
+      "description": "환자·일자별 활력징후 집계 (파생)",
+      "labels": {
+        "data_domain": "health",
+        "layer": "gold"
+      },
+      "columns": {
+        "patient_id": null,
+        "d": null,
+        "avg_hr": null,
+        "max_sys": null
+      }
+    }
+  },
+  "aspects": {
+    "patients": {
+      "aspect_type": "803880923651.asia-northeast3.data-classification",
+      "data": {
+        "steward": "data-team",
+        "sensitivity": "high",
+        "pii_category": "PHI"
+      }
+    }
+  },
+  "data_quality": {
+    "target": "vitals",
+    "rules": [
+      {
+        "column": "patient_id",
+        "dimension": "COMPLETENESS",
+        "type": "non_null_expectation"
+      },
+      {
+        "column": "heart_rate",
+        "dimension": "VALIDITY",
+        "type": "range_expectation",
+        "min": "20",
+        "max": "300"
+      },
+      {
+        "column": "systolic",
+        "dimension": "VALIDITY",
+        "type": "range_expectation",
+        "min": "50",
+        "max": "250"
+      }
+    ],
+    "latest_result": {
+      "passed": true,
+      "row_count": 5,
+      "rules": [
+        {
+          "column": "patient_id",
+          "passed": true,
+          "pass_ratio": 1.0
+        },
+        {
+          "column": "heart_rate",
+          "passed": true,
+          "pass_ratio": 1.0
+        },
+        {
+          "column": "systolic",
+          "passed": true,
+          "pass_ratio": 1.0
+        }
+      ]
+    }
+  },
+  "lineage": []
+}
