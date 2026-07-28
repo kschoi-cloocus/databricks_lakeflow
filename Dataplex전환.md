@@ -52,6 +52,15 @@
 
 **③ 전환** — Lake → Catalog, Zone → Schema(또는 메달리온 계층). "raw/curated" 구역 개념이 곧 bronze/silver/gold.
 
+**매핑**
+
+| Dataplex | Databricks | 비고 |
+|---|---|---|
+| Lake | Catalog | 최상위 그릇 |
+| Zone (raw) | Schema `bronze` (또는 태그 `zone=raw`) | 정제 단계 |
+| Zone (curated) | Schema `silver` / `gold` | |
+| Asset (BQ dataset·GCS) | Schema · Table · Volume | |
+
 ```sql
 CREATE CATALOG IF NOT EXISTS health;            -- Lake
 CREATE SCHEMA  IF NOT EXISTS health.bronze;     -- raw zone
@@ -68,6 +77,17 @@ ALTER  SCHEMA  health.silver SET TAGS ('zone'='curated');
 **② Databricks 대응** — UC에는 **별도 카드가 없다**. 테이블을 만들면 **그 테이블 정의 자체가 카드**다(스키마·설명·위치가 내장). `information_schema`가 카드목록 역할.
 
 **③ 전환** — Entry "등록/동기화" 로직은 **대부분 제거**된다. 남는 건 설명·속성 이관뿐.
+
+**매핑**
+
+| Dataplex | Databricks | 비고 |
+|---|---|---|
+| Entry | 테이블/뷰/볼륨 **자체** | 별도 등록 불필요 |
+| Entry Group | Catalog · Schema | |
+| Entry Type | 자산 유형(table/view/volume/model) | 네이티브 |
+| Entry 설명(description) | `COMMENT ON TABLE/COLUMN` | |
+| Entry 커스텀 속성 | `TBLPROPERTIES` | |
+| Entry 목록 조회 | `system.information_schema.tables/columns` | |
 
 ```sql
 -- 설명(카드의 내용)
@@ -95,6 +115,17 @@ w.tables.update(full_name="health.silver.vitals", comment="활력징후 정제 �
 
 **③ 전환** — 정형 양식(폼) → **평탄화된 key-value**. 중첩 필드 `pii.category` → 태그 `pii.category=PHI`. 정보는 보존하되 "폼" 구조는 평탄화. 아주 복잡한 구조만 `TBLPROPERTIES`에 JSON으로 보존.
 
+**매핑**
+
+| Dataplex | Databricks | 비고 |
+|---|---|---|
+| Aspect Type (템플릿) | Tag Policy (허용 키/값) | 스키마 검증 역할 |
+| Aspect (부착 인스턴스) | Tags (key-value) | |
+| Aspect 중첩 필드 | tag key `aspect.field` | 평탄화 |
+| Aspect 복합/typed 구조 | `TBLPROPERTIES` JSON | 구조 보존 |
+| 컬럼 aspect | 컬럼 태그 | |
+| 태그 조회 | `information_schema.*_tags` | |
+
 ```sql
 ALTER TABLE  health.silver.vitals SET TAGS ('data_domain'='health','pii'='true');
 ALTER TABLE  health.silver.vitals ALTER COLUMN patient_id SET TAGS ('classification'='PHI');
@@ -113,6 +144,16 @@ SELECT * FROM system.information_schema.column_tags WHERE tag_name='classificati
 **② Databricks 대응** — UC는 Databricks 컴퓨트로 실행된 모든 읽기/쓰기의 **테이블·컬럼 리니지를 자동 기록**한다. 등록 코드가 거의 필요 없다. `system.access.table_lineage / column_lineage`로 조회.
 
 **③ 전환** — **수동 리니지 등록 로직 → 대부분 삭제**(자동 수집). Databricks 밖에서 실행되는 것만 External Lineage로 보완. 과거 이력은 Dataplex export로 보관하고, UC는 전환 시점부터 새로 축적.
+
+**매핑**
+
+| Dataplex | Databricks | 비고 |
+|---|---|---|
+| Lineage event (수동 등록) | 자동 리니지 | 등록 코드 소멸 |
+| BQ 자동 리니지 | UC 자동 리니지 (테이블·컬럼) | |
+| Process / Run | 쿼리·잡 단위 자동 캡처 | |
+| Lineage 조회 | `system.access.table_lineage` / `column_lineage`, REST | |
+| 외부 시스템 리니지 | External Lineage API | 수동 등록 |
 
 ```sql
 SELECT source_table_full_name, target_table_full_name, event_time
@@ -136,7 +177,16 @@ ORDER BY event_time DESC;
 
 **③ 전환** — "따로 도는 스캔 잡" → 데이터 **생산 공정 안으로 인라인**(품질이 파이프라인의 일부). 기존/외부 테이블만 Monitoring으로 상시 감시.
 
-**DQ Rule 유형별 매핑**
+**매핑 (개념)**
+
+| Dataplex | Databricks | 비고 |
+|---|---|---|
+| DataScan (DQ rule) | SDP **expectations** / Delta **constraint** | 파이프라인 인라인 |
+| Data Profiling Scan | **Lakehouse Monitoring** (profile) | |
+| Scan 스케줄 | 파이프라인 실행 / Jobs 스케줄 | |
+| Scan 결과 저장 | `event_log`(expectation) / `*_profile_metrics` | |
+
+**매핑 (DQ Rule 유형별)**
 | Dataplex Rule | Databricks |
 |---|---|
 | NonNull | `@dlt.expect("nn","c IS NOT NULL")` 또는 `SET NOT NULL` |
