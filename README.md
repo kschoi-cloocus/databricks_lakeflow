@@ -85,6 +85,14 @@ GCP BigQuery 기반 데이터 파이프라인을 Azure Databricks로 이관하�
 
 *단일 YAML 설정이 13개 테이블을 정의하고, 실행 순서/의존성은 SDP가 자동 계산한다. (메달리온=틸, 증분·CDC=블루, 장애/복원력=레드, 격리=앰버, 모니터링=그레이)*
 
+### 5.2 실제 파이프라인 실행 화면 (Databricks UI)
+
+아래는 위 설계 도식이 실제 Databricks 워크스페이스에서 실행된 화면이다. 13개 테이블이 의존성에 따라 자동 정렬·실행되고, 각 테이블의 출력 행수·소요시간·데이터 품질(expectation)·변경 여부가 표시된다.
+
+![실제 SDP 파이프라인 실행 화면 (Databricks UI) — 전체 Completed](images/03_pipeline_ui.png)
+
+*실행 결과 발췌: `bronze_trips` 22K · `silver_trips_clean` 22K(expectation 10) · `quarantine_trips` 10 · `gold_by_pickup_zip` 126 / `dropoff_zip` 202 / `fare_band` 3 / `high_fare` 532 · `orders_validated` 5(1 expectation) · `branch_independent_ok` 100 · 상태 전부 ✅ Completed.*
+
 ---
 
 ## 6. 시나리오별 검증 결과 (①~⑫ + 모니터링)
