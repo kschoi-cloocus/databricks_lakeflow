@@ -1,0 +1,31 @@
+# ════════════════════════════════════════════════════════════════════
+#  샘플 설정 — 확장판 v3 (증분/CDC/파라미터 시나리오 포함)
+# ════════════════════════════════════════════════════════════════════
+
+source: samples.nyctaxi.trips        # 원천 (배치 계층용)
+bronze_table: bronze_trips
+silver_table: silver_trips_clean
+
+# 시나리오⑥ 증분: appendable 랜딩 테이블 (내 스키마, INSERT로 신규분 추가)
+landing_table: raw_trips_landing
+# 시나리오⑦ CDC: 변경 레코드 소스 (op/seq 포함)
+cdc_source: customer_cdc
+# 시나리오⑩ Fail-fast: 주문 소스 (amount>=0 위반 시 파이프라인 중단)
+orders_source: orders_raw
+
+# 시나리오② 데이터 품질 (Dataplex DQ → SDP expectations)
+expectations:
+  valid_fare: "fare_amount > 0"
+  non_negative_distance: "trip_distance >= 0"
+  pickup_present: "pickup_zip IS NOT NULL"
+
+# 시나리오①/③ gold 집계 (동적 생성)
+gold_tables:
+  - name: gold_by_pickup_zip
+    dimension: pickup_zip
+  - name: gold_by_dropoff_zip
+    dimension: dropoff_zip
+  - name: gold_by_trip_len
+    dimension: "case when trip_distance < 2 then 'short' when trip_distance < 10 then 'mid' else 'long' end"
+  - name: gold_by_fare_band
+    dimension: "case when fare_amount < 10 then '01_<10' when fare_amount < 30 then '02_10-30' else '03_30+' end"

@@ -1,0 +1,17 @@
+{
+  "name": "sdp_dev_dynamic_yaml",
+  "serverless": true,
+  "catalog": "adb_wrkspc_krc_dev",
+  "schema": "sdp_poc_demo",
+  "channel": "CURRENT",
+  "development": true,
+  "continuous": false,
+  "configuration": {
+    "demo.config_path": "/Volumes/adb_wrkspc_krc_dev/sdp_poc_demo/cfg/pipelines.yaml",
+    "demo.min_fare": "50",
+    "demo.inject_fault": "false"
+  },
+  "event_log": {"catalog": "adb_wrkspc_krc_dev", "schema": "sdp_poc_demo", "name": "pipeline_event_log"},
+  "notifications": [{"email_recipients": ["kschoi@cloocus.com"], "alerts": ["on-update-failure", "on-flow-failure"]}],
+  "libraries": [{"notebook": {"path": "/Users/kschoi@cloocus.com/sdp_poc_demo/sdp_dynamic_pipeline"}}]
+}
