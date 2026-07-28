@@ -191,6 +191,7 @@ GCP BigQuery 기반 데이터 파이프라인을 Azure Databricks로 이관하�
 - 카탈로그.스키마: `adb_wrkspc_krc_dev.sdp_poc_demo` (13 테이블)
 - 설정 파일: `/Volumes/adb_wrkspc_krc_dev/sdp_poc_demo/cfg/pipelines.yaml`
 - **파이프라인 소스·설정**: [`pipeline/`](pipeline/) — 노트북 `sdp_dynamic_pipeline.py`, 설정 `pipelines.yaml`, 스펙 `pipeline_config.json`
+- **과제 A (거버넌스)**: [Dataplex → Unity Catalog 전환 가이드](Dataplex전환.md)
 - 재실행: `databricks pipelines start-update 367220ef-f40a-416a-8932-adb5839d470b -p DEFAULT`
 - 요약 리포트(아티팩트): https://claude.ai/code/artifact/d6d1ea9c-68cc-4769-b606-1a86c92cdbc6
 
