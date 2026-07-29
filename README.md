@@ -74,7 +74,7 @@ GCP BigQuery 기반 데이터 파이프라인을 Azure Databricks로 이관하�
 ## 5. 프로토타입 설계 및 환경
 
 - **파이프라인**: `sdp_dev_dynamic_yaml` (서버리스, id `367220ef-f40a-416a-8932-adb5839d470b`)
-- **카탈로그.스키마**: `adb_wrkspc_krc_dev.sdp_poc_demo` (총 13 테이블)
+- **카탈로그.스키마**: `adb_wrkspc_krc_dev.sdp_poc_demo` (산출 데이터셋 총 14개 = materialized view 11 + streaming table 3)
 - **설정(YAML)**: `/Volumes/adb_wrkspc_krc_dev/sdp_poc_demo/cfg/pipelines.yaml` — 소스·테이블·품질규칙·파라미터를 단일 파일로 구동
 - **원천**: `samples.nyctaxi.trips`(21,932행) 및 데모용 appendable 소스(`raw_trips_landing`, `customer_cdc`, `orders_raw`)
 
@@ -84,11 +84,11 @@ GCP BigQuery 기반 데이터 파이프라인을 Azure Databricks로 이관하�
 
 ![Lakeflow SDP 파이프라인 아키텍처 — 소스→bronze→silver→gold(메달리온) + 증분·CDC·장애/복원력 + 모니터링](images/01_architecture.png)
 
-*단일 YAML 설정이 13개 테이블을 정의하고, 실행 순서/의존성은 SDP가 자동 계산한다. (메달리온=틸, 증분·CDC=블루, 장애/복원력=레드, 격리=앰버, 모니터링=그레이)*
+*단일 YAML 설정이 14개 테이블을 정의하고, 실행 순서/의존성은 SDP가 자동 계산한다. (메달리온=틸, 증분·CDC=블루, 장애/복원력=레드, 격리=앰버, 모니터링=그레이)*
 
 ### 5.2 실제 파이프라인 실행 화면 (Databricks UI)
 
-아래는 위 설계 도식이 실제 Databricks 워크스페이스에서 실행된 화면이다. 13개 테이블이 의존성에 따라 자동 정렬·실행되고, 각 테이블의 출력 행수·소요시간·데이터 품질(expectation)·변경 여부가 표시된다.
+아래는 위 설계 도식이 실제 Databricks 워크스페이스에서 실행된 화면이다. 14개 테이블이 의존성에 따라 자동 정렬·실행되고, 각 테이블의 출력 행수·소요시간·데이터 품질(expectation)·변경 여부가 표시된다.
 
 ![실제 SDP 파이프라인 실행 화면 (Databricks UI) — 전체 Completed](images/03_pipeline_ui.png)
 
@@ -98,20 +98,22 @@ GCP BigQuery 기반 데이터 파이프라인을 Azure Databricks로 이관하�
 
 ## 6. 시나리오별 검증 결과 (①~⑫ + 모니터링)
 
-| # | 시나리오 | 핵심 동작 | 증거(실측) | 이관 갭 |
-|---|---|---|---|---|
-| ① | 동적 테이블 생성 | YAML 목록만큼 테이블 자동 생성 | gold 4개 자동 생성 | 명령형→선언형 |
-| ② | 데이터 품질(expectations) | 규칙 위반 행 자동 드롭 | bronze 21,932 → silver 21,922 (**10 드롭**) | Dataplex DQ |
-| ③ | 동적 확장 | YAML 한 줄 추가 → 테이블 증가 | `gold_by_fare_band` 추가 (<10:11,873 / 10–30:8,698 / 30+:1,351) | 운영 유연성 |
-| ④ | 다층 의존성 자동 정렬 | 순서 미지정, SDP 자동 계산 | bronze→silver→gold 자동 실행 | 선언형 |
-| ⑤⑥ | 스트리밍/증분 | 재실행 시 신규분만 처리 | numOutputRows **1,000 → 50** (신규만) | execution_date/백필 |
-| ⑦ | CDC/SCD (AUTO CDC) | 변경분 자동 병합 | SCD1 3행(Carol 삭제 반영) · SCD2 5행(Bob 2버전 이력) | BigQuery MERGE |
-| ⑧ | 파라미터화 | 파라미터로 결과 제어 | `min_fare` 20→50 = **2,938 → 532행** | 갭②(재처리) |
-| ⑨ | 격리(Quarantine) | 불량 데이터 무손실 분리 | quarantine 10 · (21,922 + 10 = 21,932) | 복원력 |
-| ⑩ | Fail-fast | 규칙 위반 시 즉시 중단 + 복구 | 불량(amount=-50) 주입 → **FAILED** → 제거 후 **COMPLETED** | 복원력 |
-| ⑪ | 부분 실패 격리 | 장애 flow만 실패, 나머지 완료 | **13 flow 완료 / branch_bad 1개만 실패** (branch_ok 100행 커밋) | 복원력 |
-| ⑫ | 자동 재시도 | 프로덕션 모드 자동 재시도 | branch_bad **3회 재시도** + MaxRetryThreshold, update 5~6회 재시도 (개발 모드는 재시도 0) | 복원력 |
-| ★ | 모니터링 + 알림 | 이벤트로그 UC 테이블 + 실패 이메일 | event_log **629건** · expectation passed/failed · 실패 포착 | 통합 관측성 |
+> 대상 테이블은 모두 `adb_wrkspc_krc_dev.sdp_poc_demo` 스키마에 생성된다. (원천) = 입력 소스 테이블.
+
+| # | 시나리오 | 대상 테이블 | 핵심 동작 | 증거(실측) | 이관 갭 |
+|---|---|---|---|---|---|
+| ① | 동적 테이블 생성 | `gold_by_pickup_zip` · `gold_by_dropoff_zip` · `gold_by_trip_len` · `gold_by_fare_band` | YAML 목록만큼 테이블 자동 생성 | gold 4개 자동 생성 | 명령형→선언형 |
+| ② | 데이터 품질(expectations) | `bronze_trips` → `silver_trips_clean` | 규칙 위반 행 자동 드롭 | bronze 21,932 → silver 21,922 (**10 드롭**) | Dataplex DQ |
+| ③ | 동적 확장 | `gold_by_fare_band` | YAML 한 줄 추가 → 테이블 증가 | `gold_by_fare_band` 추가 (<10:11,873 / 10–30:8,698 / 30+:1,351) | 운영 유연성 |
+| ④ | 다층 의존성 자동 정렬 | `bronze_trips` → `silver_trips_clean` → `gold_*` | 순서 미지정, SDP 자동 계산 | bronze→silver→gold 자동 실행 | 선언형 |
+| ⑤⑥ | 스트리밍/증분 | `streaming_trips` (원천 `raw_trips_landing`) | 재실행 시 신규분만 처리 | numOutputRows **1,000 → 50** (신규만) | execution_date/백필 |
+| ⑦ | CDC/SCD (AUTO CDC) | `customer_scd1`(최신) · `customer_scd2`(이력) (원천 `customer_cdc`) | 변경분 자동 병합 | SCD1 3행(Carol 삭제 반영) · SCD2 5행(Bob 2버전 이력) | BigQuery MERGE |
+| ⑧ | 파라미터화 | `gold_high_fare` | 파라미터로 결과 제어 | `min_fare` 20→50 = **2,938 → 532행** | 갭②(재처리) |
+| ⑨ | 격리(Quarantine) | `quarantine_trips` (+통과분 `silver_trips_clean`) | 불량 데이터 무손실 분리 | quarantine 10 · (21,922 + 10 = 21,932) | 복원력 |
+| ⑩ | Fail-fast | `orders_validated` (원천 `orders_raw`) | 규칙 위반 시 즉시 중단 + 복구 | 불량(amount=-50) 주입 → **FAILED** → 제거 후 **COMPLETED** | 복원력 |
+| ⑪ | 부분 실패 격리 | `branch_independent_ok`(완료) · `branch_independent_bad`(실패) | 장애 flow만 실패, 나머지 완료 | **13 flow 완료 / branch_bad 1개만 실패** (branch_ok 100행 커밋) | 복원력 |
+| ⑫ | 자동 재시도 | `branch_independent_bad` | 프로덕션 모드 자동 재시도 | branch_bad **3회 재시도** + MaxRetryThreshold, update 5~6회 재시도 (개발 모드는 재시도 0) | 복원력 |
+| ★ | 모니터링 + 알림 | `pipeline_event_log` | 이벤트로그 UC 테이블 + 실패 이메일 | event_log **629건** · expectation passed/failed · 실패 포착 | 통합 관측성 |
 
 ![프로토타입 시나리오 검증 결과 (실측) — 데이터 품질·증분·파라미터·부분 실패 격리](images/02_results.png)
 
@@ -189,7 +191,7 @@ GCP BigQuery 기반 데이터 파이프라인을 Azure Databricks로 이관하�
 ## 부록 A. 자산 위치 / 재현
 
 - 파이프라인: `sdp_dev_dynamic_yaml` (id `367220ef-f40a-416a-8932-adb5839d470b`)
-- 카탈로그.스키마: `adb_wrkspc_krc_dev.sdp_poc_demo` (13 테이블)
+- 카탈로그.스키마: `adb_wrkspc_krc_dev.sdp_poc_demo` (산출 데이터셋 14개 = MV 11 + 스트리밍 테이블 3)
 - 설정 파일: `/Volumes/adb_wrkspc_krc_dev/sdp_poc_demo/cfg/pipelines.yaml`
 - **파이프라인 소스·설정**: [`pipeline/`](pipeline/) — 노트북 `sdp_dynamic_pipeline.py`, 설정 `pipelines.yaml`, 스펙 `pipeline_config.json`
 - **과제 A (거버넌스)**: [전환](Dataplex_UC전환.md) · [확장](Dataplex_UC확장.md) · [Action Plan](Dataplex_to_UC_ActionPlan.md) · [실측 테스트결과](Dataplex_to_UC_테스트결과.md) · [코드](dataplex_to_uc/)
