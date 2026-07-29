@@ -6,6 +6,7 @@
 - **작성일**: 2026-07-28
 - **작성 환경**: MISGF76 로컬 PC
 - **실행 워크스페이스**: `adb_wrkspc_krc_dev` (Azure Databricks, Serverless)
+- **관련 산출물**: [BigQuery→Databricks · Event Hub/Cosmos 실시간 원천 프로토타입](BigQuery_EventHub_Cosmos_프로토타입.md) — 배치(BigQuery) + 실시간(Event Hub/Cosmos) 원천을 하나의 SDP 메달리온으로 통합한 별도 프로토타입(실제 Azure/GCP 리소스로 구축·검증)
 
 ---
 
