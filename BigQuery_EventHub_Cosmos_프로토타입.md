@@ -68,23 +68,23 @@ flowchart LR
   end
 
   subgraph GCP["GCP (AsIs 배치/이력)"]
-    BQ[("BigQuery\ndevice_telemetry_history\ndevice_catalog")]
+    BQ[("BigQuery<br/>device_telemetry_history<br/>device_catalog")]
   end
 
   subgraph AZ["Azure (실시간 원천)"]
-    EH["Event Hub\ndevice-telemetry\n(Kafka 호환 스트림)"]
-    COS[("Cosmos DB\ndevice_state\n(단말기 hot-state)")]
+    EH["Event Hub<br/>device-telemetry<br/>(Kafka 호환 스트림)"]
+    COS[("Cosmos DB<br/>device_state<br/>(단말기 hot-state)")]
   end
 
   subgraph DBX["Azure Databricks — Unity Catalog: iot_proto"]
     direction TB
-    BRZ["bronze_telemetry\n(raw stream)"]
-    SIL["silver_telemetry\n(파싱+품질)"]
-    QUA["silver_quarantine\n(격리)"]
-    REF["device_reference\n(Cosmos 스냅샷)"]
-    ENR["silver_enriched\n(조인)"]
-    GLD["gold_region_metric\ngold_device_summary"]
-    BQB["bq_telemetry_bronze\n(BigQuery 이관)"]
+    BRZ["bronze_telemetry<br/>(raw stream)"]
+    SIL["silver_telemetry<br/>(파싱+품질)"]
+    QUA["silver_quarantine<br/>(격리)"]
+    REF["device_reference<br/>(Cosmos 스냅샷)"]
+    ENR["silver_enriched<br/>(조인)"]
+    GLD["gold_region_metric<br/>gold_device_summary"]
+    BQB["bq_telemetry_bronze<br/>(BigQuery 이관)"]
   end
 
   D1 -- 실시간 이벤트 --> EH
