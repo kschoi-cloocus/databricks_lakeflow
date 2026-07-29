@@ -28,6 +28,8 @@ BigQuery(배치/이력) + Event Hub·Cosmos(실시간) → Databricks SDP 프로
 | A1 | `05_bq_sample.py` | BigQuery 샘플 warehouse 생성(2,400+20행) |
 | A2 | `06_federation_setup.py` | Lakehouse Federation 연결·라이브 조회 |
 | A3 | `07_bq_export_load.py` | BigQuery 배치 export → UC Volume → Delta 이관 |
+| DQX | `08_dqx_quality.py` | DQX(Databricks Labs) 품질검증 — at-rest·error/warn·데이터셋 체크(SDP expectations 보완) |
+| DQX | `run_dqx.py` | 08 노트북을 serverless job으로 제출·실행 |
 
 `04_sdp_eventhub_pipeline.py`는 SDP 파이프라인 **본체**(Databricks 노트북 소스)로, `run_pipeline.py`가 워크스페이스에 업로드해 실행합니다.
 

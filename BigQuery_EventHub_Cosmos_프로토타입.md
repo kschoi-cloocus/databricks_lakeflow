@@ -346,6 +346,21 @@ def silver_enriched():
 
 `bronze 600 = silver 563 + 격리 37`, 그리고 격리 37 = 주입 불량(14+12+11)과 **완전 정합**. metric별 범위 규칙으로 gold의 물리값도 정상 범위(습도 ≤100, 진동 ≤50)로 수렴했습니다.
 
+### 5.7 데이터 품질 심화 — DQX (SDP expectations 보완)
+
+SDP `expectations`만으로는 품질 관리가 다 커버되지 않아, **DQX(Databricks Labs)** 프레임워크를 함께 실증했습니다. 이미 적재된 `bronze_telemetry`(600건)를 **SDP 밖에서(at-rest)** DQX로 검증했습니다. (코드: [`realtime_source_proto/08_dqx_quality.py`](realtime_source_proto/08_dqx_quality.py) · 실행 [`run_dqx.py`](realtime_source_proto/run_dqx.py))
+
+| | SDP expectations | DQX |
+|---|---|---|
+| 진단 | 집계 카운트 | **행/열 상세**(`_errors`/`_warnings`: 규칙명·메시지·컬럼) |
+| 심각도 | drop/fail/allow | **error(격리) vs warn(유지+표시)** |
+| 데이터셋 체크 | 어려움 | **is_unique·foreign_key(참조무결성)·aggregate·이상탐지** |
+| 실행 | 파이프라인 내부 | **at-rest 사후검증** + YAML/no-code Studio |
+
+**실측(같은 600건)**: DQX는 `valid 574 / quarantine 26(error: null 12 + 범위 14) / warn 103(rssi 92 + battery 11)`. **SDP가 drop한 battery 11건을 DQX는 warn으로 valid에 보존**해 "버릴 것"과 "봐둘 것"을 구분했습니다. 각 위반은 `[value_in_metric_range] value out of physical range` 처럼 **행별 사유**가 남습니다.
+
+> **정리**: SDP expectations = 파이프라인 1차 게이트, DQX = 그 위 정밀 품질 렌즈(상세진단·심각도·데이터셋·at-rest). 프로파일러로 **SDP expectation 후보 자동생성**도 가능.
+
 ---
 
 ## 6. 재현 가이드
@@ -412,6 +427,7 @@ python realtime_source_proto/07_bq_export_load.py      # 배치 export → Delta
 | Databricks | UC schema | `adb_wrkspc_krc_dev.iot_proto` |
 | Databricks | SDP pipeline | `iot_proto_eventhub_sdp` (serverless) |
 | Databricks | Foreign Catalog | `bq_iot_fed` → BigQuery |
+| Databricks | DQX 산출 테이블 | `dqx_annotated` / `dqx_valid` / `dqx_quarantine` |
 
 **코드 산출물** (`realtime_source_proto/`)
 
@@ -426,6 +442,8 @@ python realtime_source_proto/07_bq_export_load.py      # 배치 export → Delta
 | `05_bq_sample.py` | BigQuery 샘플 warehouse 생성 |
 | `06_federation_setup.py` | Lakehouse Federation 연결·조회 |
 | `07_bq_export_load.py` | BigQuery 배치 export → Delta 이관 |
+| `08_dqx_quality.py` | **DQX 데이터 품질**(at-rest·error/warn·데이터셋 체크) |
+| `run_dqx.py` | DQX 노트북 serverless job 실행 |
 
 ---
 
